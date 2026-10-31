@@ -110,15 +110,19 @@ func TestCreatePermissionDenied(t *testing.T) {
 	assertEmptyDir(t, dir)
 }
 
-func TestCreateUnlinked(t *testing.T) {
+func TestUnlink(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	f, err := createUnlinked(dir)
+	f, err := os.CreateTemp(dir, "tmpf-*")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = f.Close() })
-	assertTemporaryFile(t, f)
+	result, err := unlink(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertTemporaryFile(t, result)
 	assertEmptyDir(t, dir)
 }
 

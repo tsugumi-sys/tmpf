@@ -3,5 +3,9 @@ package tmpf
 import "os"
 
 func create(dir string) (*os.File, error) {
-	return createUnlinked(dir)
+	f, err := os.CreateTemp(dir, "tmpf-*")
+	if err != nil {
+		return nil, err
+	}
+	return unlink(f)
 }

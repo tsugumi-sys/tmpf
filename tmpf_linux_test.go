@@ -16,7 +16,7 @@ func TestCreateLinuxFallback(t *testing.T) {
 		t.Run(errno.Error(), func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			f, err := createWithOpen(dir, func(string, int, uint32) (int, error) {
+			f, err := createWithOTmpfile(dir, func(string, int, uint32) (int, error) {
 				return -1, errno
 			})
 			if err != nil {
@@ -37,7 +37,7 @@ func TestCreateLinuxPreservesOtherErrors(t *testing.T) {
 		t.Run(errno.Error(), func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			f, err := createWithOpen(dir, func(string, int, uint32) (int, error) {
+			f, err := createWithOTmpfile(dir, func(string, int, uint32) (int, error) {
 				return -1, errno
 			})
 			if f != nil {
@@ -60,7 +60,7 @@ func TestCreateLinuxRetriesInterruptedOpen(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	calls := 0
-	f, err := createWithOpen(dir, func(path string, flags int, mode uint32) (int, error) {
+	f, err := createWithOTmpfile(dir, func(path string, flags int, mode uint32) (int, error) {
 		calls++
 		if calls == 1 {
 			return -1, unix.EINTR
@@ -82,7 +82,7 @@ func TestCreateLinuxAnonymous(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	var openErr error
-	f, err := createWithOpen(dir, func(path string, flags int, mode uint32) (int, error) {
+	f, err := createWithOTmpfile(dir, func(path string, flags int, mode uint32) (int, error) {
 		fd, err := unix.Open(path, flags, mode)
 		openErr = err
 		return fd, err

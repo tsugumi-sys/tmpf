@@ -9,15 +9,15 @@ import (
 )
 
 func create(dir string) (*os.File, error) {
-	return createWithOpen(dir, unix.Open)
+	return createWithOTmpfile(dir, unix.Open)
 }
 
-func createWithOpen(dir string, open func(string, int, uint32) (int, error)) (*os.File, error) {
+func createWithOTmpfile(dir string, openFile func(string, int, uint32) (int, error)) (*os.File, error) {
 	var fd int
 	var err error
 	for {
 		// O_EXCL prevents later linking of the anonymous file into the filesystem.
-		fd, err = open(dir, unix.O_TMPFILE|unix.O_RDWR|unix.O_CLOEXEC|unix.O_EXCL, 0o600)
+		fd, err = openFile(dir, unix.O_TMPFILE|unix.O_RDWR|unix.O_CLOEXEC|unix.O_EXCL, 0o600)
 		if !errors.Is(err, unix.EINTR) {
 			break
 		}
@@ -31,7 +31,11 @@ func createWithOpen(dir string, open func(string, int, uint32) (int, error)) (*o
 	// error too. EINVAL covers environments that reject the O_TMPFILE flags.
 	if errors.Is(err, unix.EOPNOTSUPP) || errors.Is(err, unix.EISDIR) ||
 		errors.Is(err, unix.ENOENT) || errors.Is(err, unix.EINVAL) {
-		return createUnlinked(dir)
+		f, err := os.CreateTemp(dir, "tmpf-*")
+		if err != nil {
+			return nil, err
+		}
+		return unlink(f)
 	}
 	return nil, &os.PathError{Op: "open", Path: dir, Err: err}
 }
