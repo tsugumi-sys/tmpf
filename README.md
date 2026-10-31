@@ -1,10 +1,9 @@
 # tmpf
 
-Temporary files that do not need `os.Remove`.
+Temporary files with cleanup on close.
 
-`tmpf.Create` returns a readable, writable, seekable `*os.File` without leaving a
-file name in the directory. Close the file when finished; the OS reclaims its
-resources after the last reference is closed.
+`tmpf.Create` returns a readable, writable, seekable `*os.File`. Close the file
+when finished; the OS reclaims its resources after the last reference is closed.
 
 Supports **Linux and macOS**, with **Go 1.26 or later**.
 
@@ -38,7 +37,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close() // No os.Remove is needed.
+	defer f.Close() // Close the file when finished.
 
 	if _, err := f.WriteString("hello\n"); err != nil {
 		return err
@@ -61,39 +60,7 @@ Pass an existing directory to control the filesystem used:
 f, err := tmpf.Create("/path/to/scratch")
 ```
 
-## Behavior
-
-| | `os.CreateTemp` | `tmpf.Create` |
-| --- | --- | --- |
-| File name after successful creation | Present | Absent |
-| Caller must remove the file | Yes | No |
-| Caller must close the file | Yes | Yes |
-| Read, write, seek | Yes | Yes |
-| Reopen by name | Yes | Not supported |
-
-On Linux, tmpf first tries `O_TMPFILE` with `O_CLOEXEC` and `O_EXCL`: the file
-never has a directory entry, is not accidentally inherited across exec, and
-cannot later be linked into the filesystem. If the environment does not support
-this approach, tmpf falls back to `os.CreateTemp` followed immediately by
-unlinking the name. macOS always uses the unlink approach. Permission, capacity,
-and other operational errors are returned rather than hidden by a fallback.
-
-Files are created with permissions `0o600` before umask. A missing directory is
-an error; tmpf does not create directories. `File.Name()` is for diagnostics and
-does not provide a path for reopening or passing to an external command.
-
-## Cleanup guarantees
-
-- A successful call leaves no directory entry for the created file.
-- Callers must close the returned file; cleanup does not depend on garbage
-  collection or finalizers.
-- If a process exits after creation succeeds, its file descriptors are closed
-  by the OS. Duplicated descriptors, mappings, or references deliberately passed
-  to another process can keep the file's resources alive.
-- The unlink approach briefly creates a named file. A process killed between
-  creation and unlinking can leave that file behind.
-- If unlinking fails, tmpf closes the opened file and returns an error. The named
-  file may remain. The no-removal guarantee applies to successful calls.
+See [Architecture](docs/arch.md) for file behavior and cleanup details.
 
 ## Development
 
